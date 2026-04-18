@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { SafeAreaView, View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, SafeAreaView, View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import SevenSegmentText from '../components/SevenSegmentText';
 import HorseSprite from '../components/HorseSprite';
@@ -41,6 +41,36 @@ const padTime = (sec: number) => {
   return `${h}:${m}:${s}`;
 };
 
+const BlinkingLed: React.FC<{ color: string }> = ({ color }) => {
+  const opacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.08, duration: 550, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 550, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [opacity]);
+  return (
+    <Animated.View
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: color,
+        shadowColor: color,
+        shadowOpacity: 0.95,
+        shadowRadius: 5,
+        opacity,
+        marginRight: 7,
+        flexShrink: 0,
+      }}
+    />
+  );
+};
+
 const MainScreen: React.FC = () => {
   const timer = useTimer();
   const animator = useFareDisplayAnimator({ initialDisplayFare: BASE_FARE });
@@ -55,16 +85,17 @@ const MainScreen: React.FC = () => {
     [animator.enqueueFareIncrement]
   );
 
-  // START 전에는 속도 0 고정, 동작 중에는 GPS 값만 사용
+  // START 전에는 속도 0 고정, 동작 중에는 GPS 값만 사용.
+  // GPS 신호 손실(gpsLost) 시에도 0으로 고정 → useCountdownBucket이 시간 기반 모드로 전환.
   const speedKmh = useMemo(() => {
     if (!isRunning) {
       return 0;
     }
-    if (gps.permissionStatus !== 'granted' || gps.error != null) {
+    if (gps.permissionStatus !== 'granted' || gps.error != null || gps.gpsLost) {
       return 0;
     }
     return gps.speedKmh;
-  }, [isRunning, gps.permissionStatus, gps.speedKmh, gps.error]);
+  }, [isRunning, gps.permissionStatus, gps.speedKmh, gps.error, gps.gpsLost]);
 
   const horseLevel = useMemo(() => {
     // 아직 한 번도 START 하지 않은 완전 대기 상태에서만 말 정지
@@ -79,9 +110,12 @@ const MainScreen: React.FC = () => {
     return baseLevel;
   }, [speedKmh, timer.state]);
 
+  // [FIX] GPS delta와 updateId를 함께 전달해 실제 GPS 거리를 누적에 반영한다.
   const totalDistanceM = useAccumulatedDistance({
     speedKmh,
     elapsedSeconds: timer.elapsedSeconds,
+    deltaDistanceMFromGps: gps.deltaDistanceMFromGps,
+    gpsUpdateId: gps.gpsUpdateId,
   });
   const distanceKm = totalDistanceM / 1000;
 
@@ -232,12 +266,39 @@ const MainScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* 권한/오류 안내 */}
-            {(gps.error || gps.permissionStatus === 'denied') && (
-              <View style={styles.permissionRow}>
-                <Text style={styles.permissionText} numberOfLines={2}>
-                  {gps.error ?? '위치 권한이 거부되었습니다. 설정에서 허용하면 실제 속도로 요금이 적용됩니다.'}
+            {/* GPS 신호 손실 배너 (주행 중 신호 끊김) */}
+            {gps.gpsLost && isRunning && (
+              <View style={[styles.statusPanel, styles.statusPanelAmber]}>
+                <BlinkingLed color="#D4A84B" />
+                <Text style={styles.statusPanelTextAmber} numberOfLines={1}>
+                  !! GPS NO SIGNAL — TIME MODE ACTIVE
                 </Text>
+              </View>
+            )}
+
+            {/* 권한/오류 안내 */}
+            {!gps.gpsLost && (gps.error || gps.permissionStatus === 'denied') && (
+              <View style={[styles.statusPanel, styles.statusPanelRed]}>
+                <BlinkingLed color="#FF5050" />
+                <Text style={[styles.statusPanelTextRed, { flex: 1 }]} numberOfLines={2}>
+                  {gps.error
+                    ? `ERR: ${gps.error}`
+                    : 'GPS DENIED — ENABLE IN SETTINGS'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.gpsPermissionButton}
+                  onPress={() => {
+                    if (gps.permissionStatus === 'denied') {
+                      Linking.openSettings();
+                    } else {
+                      gps.requestPermission();
+                    }
+                  }}
+                >
+                  <Text style={styles.gpsPermissionButtonText}>
+                    {gps.permissionStatus === 'denied' ? 'SETTINGS' : 'ALLOW'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -410,16 +471,39 @@ const styles = StyleSheet.create({
     color: '#B8A77B',
     fontSize: 6,
   },
-  permissionRow: {
+  statusPanel: {
     marginTop: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    backgroundColor: 'rgba(180, 80, 60, 0.2)',
-    borderRadius: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    backgroundColor: '#030711',
+    borderWidth: 1,
+    borderRadius: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  permissionText: {
-    color: '#E8A090',
-    fontSize: 9,
+  statusPanelAmber: {
+    borderColor: '#5C4200',
+    borderLeftWidth: 3,
+    borderLeftColor: '#D4A84B',
+  },
+  statusPanelRed: {
+    borderColor: '#5A1515',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF5050',
+  },
+  statusPanelTextAmber: {
+    color: '#D4A84B',
+    fontSize: 8,
+    letterSpacing: 1.2,
+    fontVariant: ['tabular-nums'],
+    flexShrink: 1,
+  },
+  statusPanelTextRed: {
+    color: '#FF7070',
+    fontSize: 8,
+    letterSpacing: 1.2,
+    fontVariant: ['tabular-nums'],
+    flexShrink: 1,
   },
   footerRow: {
     marginTop: 10,
@@ -503,6 +587,21 @@ const styles = StyleSheet.create({
     color: '#EDE2C4',
     fontSize: 9,
     letterSpacing: 1,
+  },
+  gpsPermissionButton: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: '#FF5050',
+    backgroundColor: '#1A0808',
+    flexShrink: 0,
+  },
+  gpsPermissionButtonText: {
+    color: '#FF7070',
+    fontSize: 7,
+    letterSpacing: 1.2,
   },
 });
 
