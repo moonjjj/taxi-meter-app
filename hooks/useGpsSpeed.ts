@@ -42,17 +42,17 @@ export type GpsSpeedResult = {
 
 const LOCATION_WATCH_OPTIONS: Location.LocationOptions = {
   accuracy: Location.Accuracy.BestForNavigation,
-  timeInterval: 1500,
+  timeInterval: 1000,
   distanceInterval: 0,
 };
 
 const MAX_SPEED_KMH = 120;
 const MIN_DT_MS = 200;
-const MAX_ACCEPTABLE_ACCURACY_M = 50;
+const MAX_ACCEPTABLE_ACCURACY_M = 100;
 const SMOOTHING_ALPHA = 0.3;
 const MAX_JUMP_PER_UPDATE_KMH = 12;
 /** 이 시간(ms) 동안 GPS 업데이트가 없으면 신호 손실로 판단 */
-const GPS_SIGNAL_TIMEOUT_MS = 5000;
+const GPS_SIGNAL_TIMEOUT_MS = 12000;
 
 export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
   const [speedKmh, setSpeedKmh] = useState(0);
@@ -180,6 +180,8 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
               typeof coords.accuracy === 'number' &&
               coords.accuracy > MAX_ACCEPTABLE_ACCURACY_M
             ) {
+              // 정확도 미달이어도 위치 참조는 갱신해 다음 업데이트의 dt 계산 오류 방지
+              lastLocationRef.current = location;
               return;
             }
 

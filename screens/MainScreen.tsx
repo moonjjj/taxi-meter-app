@@ -77,8 +77,20 @@ const MainScreen: React.FC = () => {
   const isRunning = timer.state === 'running';
 
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  // gpsLost가 일시적으로 true가 돼도 배너가 깜빡이지 않도록 3초 debounce
+  const [showGpsLostBanner, setShowGpsLostBanner] = useState(false);
 
   const gps = useGpsSpeed(isRunning);
+
+  // gpsLost 3초 debounce: 짧은 신호 끊김엔 배너 표시 안 함
+  useEffect(() => {
+    if (!gps.gpsLost) {
+      setShowGpsLostBanner(false);
+      return;
+    }
+    const t = setTimeout(() => setShowGpsLostBanner(true), 3000);
+    return () => clearTimeout(t);
+  }, [gps.gpsLost]);
 
   const onFareIncrement = useCallback(
     (deltaSteps: number) => animator.enqueueFareIncrement(deltaSteps),
@@ -266,8 +278,8 @@ const MainScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* GPS 신호 손실 배너 (주행 중 신호 끊김) */}
-            {gps.gpsLost && isRunning && (
+            {/* GPS 신호 손실 배너 (주행 중 신호 끊김, 3초 debounce) */}
+            {showGpsLostBanner && isRunning && (
               <View style={[styles.statusPanel, styles.statusPanelAmber]}>
                 <BlinkingLed color="#D4A84B" />
                 <Text style={styles.statusPanelTextAmber} numberOfLines={1}>
