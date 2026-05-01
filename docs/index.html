@@ -26,22 +26,9 @@
             font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.8;
             color: var(--text);
-            background: linear-gradient(135deg, #ffffff 0%, #f5f7ff 50%, #ffffff 100%);
+            background: #ffffff;
             min-height: 100vh;
             position: relative;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 50%, rgba(0, 81, 186, 0.05) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(30, 127, 229, 0.05) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
         }
 
         .container {
@@ -56,7 +43,7 @@
         header {
             text-align: center;
             margin-bottom: 50px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid #f0f0f0;
             padding-bottom: 40px;
         }
 
@@ -86,14 +73,13 @@
         .lang-toggle button {
             padding: 8px 16px;
             margin: 0;
-            border: 1px solid var(--border);
+            border: 1px solid #f0f0f0;
             background: white;
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 13px;
             font-weight: 500;
             color: var(--text);
-            transition: all 0.2s ease;
         }
 
         .lang-toggle button.active {
@@ -150,14 +136,12 @@
         }
 
         .contact {
-            background: rgba(0, 81, 186, 0.08);
+            background: rgba(0, 81, 186, 0.04);
             padding: 24px;
-            border: 1px solid rgba(0, 81, 186, 0.2);
+            border: 1px solid rgba(0, 81, 186, 0.1);
             border-left: 4px solid var(--primary);
             margin-top: 40px;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            border-radius: 8px;
         }
 
         .contact strong {
@@ -169,7 +153,6 @@
             color: var(--primary);
             text-decoration: none;
             font-weight: 500;
-            transition: all 0.2s ease;
         }
 
         .contact a:hover {
@@ -184,7 +167,7 @@
             text-align: center;
             margin-top: 60px;
             padding-top: 30px;
-            border-top: 1px solid var(--border);
+            border-top: 1px solid #f0f0f0;
             font-size: 13px;
             color: var(--text-light);
         }
