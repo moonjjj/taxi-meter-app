@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>택시 미터기 - 개인정보 처리방침</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet" />
     <style>
         * {
             margin: 0;
@@ -11,111 +13,147 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary: #0051BA;
+            --primary-light: #1E7FE5;
+            --text: #333333;
+            --text-light: #666666;
+            --border: #EBEBEB;
+            --gray-bg: #F9F9F9;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f5f5f5;
+            font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.8;
+            color: var(--text);
+            background: white;
         }
 
         .container {
             max-width: 900px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: 60px 20px;
             background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         header {
             text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 3px solid #FFD700;
-            padding-bottom: 20px;
+            margin-bottom: 50px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 40px;
         }
 
         h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-            color: #222;
+            font-size: 32px;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
 
         .subtitle {
-            font-size: 14px;
-            color: #666;
+            font-size: 16px;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 12px;
         }
 
         .lang-toggle {
             position: absolute;
             top: 20px;
             right: 20px;
+            display: flex;
+            gap: 8px;
         }
 
         .lang-toggle button {
             padding: 8px 16px;
-            margin: 0 5px;
-            border: 1px solid #ddd;
+            margin: 0;
+            border: 1px solid var(--border);
             background: white;
             cursor: pointer;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            transition: all 0.2s ease;
         }
 
         .lang-toggle button.active {
-            background: #FFD700;
-            border-color: #FFD700;
-            font-weight: bold;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
         }
 
         section {
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
         h2 {
             font-size: 20px;
-            margin-bottom: 15px;
-            color: #222;
-            border-left: 4px solid #FFD700;
+            margin-bottom: 20px;
+            color: var(--text);
+            border-left: 4px solid var(--primary);
             padding-left: 12px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
         }
 
         h3 {
-            font-size: 16px;
-            margin-top: 15px;
-            margin-bottom: 10px;
-            color: #444;
+            font-size: 15px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            color: var(--text);
+            font-weight: 600;
         }
 
         p {
-            margin-bottom: 12px;
-            color: #555;
+            margin-bottom: 16px;
+            color: var(--text-light);
+            line-height: 1.8;
         }
 
         ul, ol {
             margin-left: 20px;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
 
         li {
-            margin-bottom: 8px;
-            color: #555;
+            margin-bottom: 10px;
+            color: var(--text-light);
+            line-height: 1.8;
         }
 
         .highlight {
-            background: #fffacd;
-            padding: 2px 6px;
-            border-radius: 3px;
+            background: #E8F0FF;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: var(--primary);
+            font-weight: 500;
         }
 
         .contact {
-            background: #f0f8ff;
-            padding: 15px;
-            border-left: 4px solid #4169e1;
-            margin-top: 20px;
-            border-radius: 4px;
+            background: var(--gray-bg);
+            padding: 24px;
+            border-left: 4px solid var(--primary);
+            margin-top: 40px;
+            border-radius: 12px;
         }
 
         .contact strong {
-            color: #4169e1;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .contact a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .contact a:hover {
+            color: var(--primary-light);
         }
 
         .hidden {
@@ -124,30 +162,49 @@
 
         footer {
             text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
             font-size: 13px;
-            color: #999;
+            color: var(--text-light);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--primary-light);
         }
 
         @media (max-width: 600px) {
             .container {
-                padding: 20px 15px;
+                padding: 40px 16px;
             }
 
             h1 {
-                font-size: 22px;
+                font-size: 28px;
             }
 
             h2 {
                 font-size: 18px;
             }
 
+            header {
+                margin-bottom: 40px;
+                padding-bottom: 30px;
+            }
+
             .lang-toggle {
                 position: static;
-                text-align: center;
-                margin-bottom: 20px;
+                justify-content: center;
+                margin-bottom: 24px;
+            }
+
+            .lang-toggle button {
+                padding: 7px 14px;
+                font-size: 12px;
             }
         }
     </style>
