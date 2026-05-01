@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## App Purpose & Vision
+
+**"Nostalgia for the old taxis"** — This app recreates the iconic experience of riding in classic Korean taxis from the 80s-90s era.
+
+The inspiration comes from:
+- A galloping horse that runs faster as the taxi speeds up
+- Numbers dropping elegantly, with the fare ticking up by 100 won at a time
+- The distinctive retro UI design of that golden era
+
+Through this app, users experience the charm and joy of those times while driving — both in the app and on the road. The goal is to rekindle that nostalgic feeling and make meter-watching fun again.
+
 ## Commands
 
 ```bash
