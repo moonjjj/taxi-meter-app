@@ -27,6 +27,7 @@
       }
     },
     "android": {
+      "package": "com.jeseon.taximeter",
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-adaptive-icon.png",
         "backgroundColor": "#000000"
