@@ -17,7 +17,7 @@
     "lottie-react-native": "~7.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-native": "^0.84.1",
+    "react-native": "^0.83.9",
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
