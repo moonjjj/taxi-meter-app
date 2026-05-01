@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>택시 미터기 - 개인정보 처리방침</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #FFD700;
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #222;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .lang-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .lang-toggle button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .lang-toggle button.active {
+            background: #FFD700;
+            border-color: #FFD700;
+            font-weight: bold;
+        }
+
+        section {
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #222;
+            border-left: 4px solid #FFD700;
+            padding-left: 12px;
+        }
+
+        h3 {
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            color: #444;
+        }
+
+        p {
+            margin-bottom: 12px;
+            color: #555;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .highlight {
+            background: #fffacd;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .contact {
+            background: #f0f8ff;
+            padding: 15px;
+            border-left: 4px solid #4169e1;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+
+        .contact strong {
+            color: #4169e1;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 13px;
+            color: #999;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            h2 {
+                font-size: 18px;
+            }
+
+            .lang-toggle {
+                position: static;
+                text-align: center;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="lang-toggle">
+        <button class="active" onclick="showKorean()">한국어</button>
+        <button onclick="showEnglish()">English</button>
+    </div>
+
+    <div class="container">
+        <!-- 한국어 버전 -->
+        <div id="korean">
+            <header>
+                <h1>🚕 택시 미터기</h1>
+                <div class="subtitle">개인정보 처리방침</div>
+                <div style="font-size: 12px; color: #999; margin-top: 8px;">마지막 업데이트: 2026년 5월 1일</div>
+            </header>
+
+            <section>
+                <h2>1. 개요</h2>
+                <p>「택시 미터기」(이하 "앱")은 사용자의 GPS 데이터를 활용하여 이동 거리와 소요 시간을 측정하고 요금을 계산하는 서비스를 제공합니다. 본 개인정보 처리방침은 앱이 어떤 정보를 수집하고, 어떻게 사용하며, 어떻게 보호하는지 설명합니다.</p>
+            </section>
+
+            <section>
+                <h2>2. 수집하는 개인정보</h2>
+
+                <h3>2.1 GPS/위치 데이터</h3>
+                <ul>
+                    <li><span class="highlight">위도, 경도, 고도</span> — 사용자의 현재 위치</li>
+                    <li><span class="highlight">이동 속도</span> — 실시간 속도 측정</li>
+                    <li><span class="highlight">수집 시점</span> — 앱 실행 중일 때만</li>
+                </ul>
+
+                <h3>2.2 수집되지 않는 정보</h3>
+                <ul>
+                    <li>개인 신원 정보 (이름, 전화번호, 이메일 등)</li>
+                    <li>기기 식별자 또는 추적 ID</li>
+                    <li>사용 기록 또는 분석 데이터</li>
+                    <li>제3자와의 통신 기록</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>3. 개인정보의 사용 목적</h2>
+                <ul>
+                    <li><span class="highlight">요금 계산</span> — 이동 거리 및 소요 시간 기반 택시 요금 계산</li>
+                    <li><span class="highlight">속도 측정</span> — 거리 모드(≥4 km/h)와 시간 모드(&lt;4 km/h) 자동 전환</li>
+                    <li><span class="highlight">사용자 경험 개선</span> — 앱 기능이 정상 작동하도록 보장</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>4. 데이터 보관 및 처리</h2>
+
+                <h3>4.1 저장 위치</h3>
+                <ul>
+                    <li>모든 위치 데이터는 <span class="highlight">사용자 기기의 메모리에만 저장</span></li>
+                    <li>외부 서버 또는 클라우드로 전송되지 않음</li>
+                    <li>앱 종료 시 자동으로 삭제됨</li>
+                </ul>
+
+                <h3>4.2 데이터 처리</h3>
+                <ul>
+                    <li>GPS 신호는 정확도 향상을 위해 평활화(스무딩) 처리</li>
+                    <li>이상 데이터는 감지되어 제거</li>
+                    <li>사용자의 기기에서만 계산 수행</li>
+                </ul>
+
+                <h3>4.3 보관 기간</h3>
+                <ul>
+                    <li>앱 실행 중: 실시간 위치 데이터 사용</li>
+                    <li>앱 종료 시: 모든 데이터 삭제</li>
+                    <li>장기 보관 없음</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>5. 제3자와의 정보 공유</h2>
+                <p>택시 미터기는 수집한 개인정보를 제3자와 공유하지 않습니다. 다음의 경우를 제외합니다:</p>
+                <ul>
+                    <li>사용자의 명시적 동의</li>
+                    <li>법령에 따른 의무 (수사 협력 등)</li>
+                    <li>앱 스토어 제공자의 필수 정책 (Apple, Google)</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>6. 사용자의 권리</h2>
+
+                <h3>6.1 위치 권한 거부</h3>
+                <ul>
+                    <li><strong>iOS:</strong> 설정 → 개인정보 보호 → 위치 서비스 → 택시 미터기 → "사용 중일 때"로 설정 또는 "허용 안 함"</li>
+                    <li><strong>Android:</strong> 설정 → 앱 및 알림 → 앱 권한 → 위치 → 허용 안 함</li>
+                </ul>
+
+                <h3>6.2 권한 거부 시 영향</h3>
+                <ul>
+                    <li>앱이 GPS 데이터를 수집할 수 없어 요금 계산 불가</li>
+                    <li>시간 모드로 자동 전환 (수동 시간 입력 필요)</li>
+                </ul>
+
+                <h3>6.3 정보 열람 및 삭제</h3>
+                <ul>
+                    <li>실시간 수집 데이터는 기기의 설정에서 언제든 확인 가능</li>
+                    <li>앱 제거 시 모든 저장된 데이터 완전 삭제</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>7. 보안</h2>
+                <ul>
+                    <li>모든 데이터는 기기 내에서만 처리되므로, 전송 중 데이터 유출 위험 없음</li>
+                    <li>암호화 또는 특수 보안 기술 필요 없음 (기기 내 처리)</li>
+                    <li>기기의 운영 체제 보안 메커니즘으로 보호</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>8. 아동 개인정보</h2>
+                <p>본 앱은 특정 연령 이상을 대상으로 합니다. 보호자는 아동의 위치 권한을 기기 설정에서 제어할 수 있습니다.</p>
+            </section>
+
+            <section>
+                <h2>9. 정책 변경</h2>
+                <p>이 개인정보 처리방침은 언제든 변경될 수 있습니다. 중대한 변경 사항은 앱 업데이트 또는 이 페이지 공지를 통해 알립니다. 지속적인 사용은 업데이트된 정책에 동의하는 것으로 간주됩니다.</p>
+            </section>
+
+            <section class="contact">
+                <h2 style="border: none; padding: 0; margin-bottom: 12px;">📧 문의 및 지원</h2>
+                <p><strong>이메일:</strong> <a href="mailto:mjesun12345@gmail.com">mjesun12345@gmail.com</a></p>
+                <p>개인정보 처리와 관련한 질문이나 요청 사항은 위 이메일로 문의해주세요.</p>
+            </section>
+        </div>
+
+        <!-- 영문 버전 -->
+        <div id="english" class="hidden">
+            <header>
+                <h1>🚕 Taxi Meter</h1>
+                <div class="subtitle">Privacy Policy</div>
+                <div style="font-size: 12px; color: #999; margin-top: 8px;">Last Updated: May 1, 2026</div>
+            </header>
+
+            <section>
+                <h2>1. Overview</h2>
+                <p>「Taxi Meter」(hereafter "App") provides a service to measure travel distance and time using GPS data, and calculates fare based on the data. This Privacy Policy explains what information the App collects, how it is used, and how it is protected.</p>
+            </section>
+
+            <section>
+                <h2>2. Information We Collect</h2>
+
+                <h3>2.1 GPS / Location Data</h3>
+                <ul>
+                    <li><span class="highlight">Latitude, Longitude, Altitude</span> — Your current location</li>
+                    <li><span class="highlight">Speed</span> — Real-time movement speed</li>
+                    <li><span class="highlight">Collection Time</span> — Only when the App is running</li>
+                </ul>
+
+                <h3>2.2 Information We Do NOT Collect</h3>
+                <ul>
+                    <li>Personal identity information (name, phone, email, etc.)</li>
+                    <li>Device identifiers or tracking IDs</li>
+                    <li>Usage history or analytics data</li>
+                    <li>Communication records with third parties</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>3. Purpose of Information Use</h2>
+                <ul>
+                    <li><span class="highlight">Fare Calculation</span> — Calculate taxi fare based on distance traveled and time spent</li>
+                    <li><span class="highlight">Speed Detection</span> — Automatically switch between distance mode (≥4 km/h) and time mode (&lt;4 km/h)</li>
+                    <li><span class="highlight">Service Improvement</span> — Ensure the App functions properly</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>4. Data Storage and Processing</h2>
+
+                <h3>4.1 Storage Location</h3>
+                <ul>
+                    <li>All location data is stored <span class="highlight">only in the user's device memory</span></li>
+                    <li>Not transmitted to external servers or cloud services</li>
+                    <li>Automatically deleted when the App closes</li>
+                </ul>
+
+                <h3>4.2 Data Processing</h3>
+                <ul>
+                    <li>GPS signals are smoothed to improve accuracy</li>
+                    <li>Anomalous data is detected and removed</li>
+                    <li>All calculations performed only on the user's device</li>
+                </ul>
+
+                <h3>4.3 Retention Period</h3>
+                <ul>
+                    <li>During App Usage: Real-time location data is used</li>
+                    <li>When App Closes: All data is deleted</li>
+                    <li>No long-term storage</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>5. Sharing with Third Parties</h2>
+                <p>Taxi Meter does not share collected personal information with third parties, except in the following cases:</p>
+                <ul>
+                    <li>With your explicit consent</li>
+                    <li>As required by law (law enforcement cooperation)</li>
+                    <li>Required by App Store providers' policies (Apple, Google)</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>6. Your Rights</h2>
+
+                <h3>6.1 Location Permission Control</h3>
+                <ul>
+                    <li><strong>iOS:</strong> Settings → Privacy → Location Services → Taxi Meter → "While Using" or "Never"</li>
+                    <li><strong>Android:</strong> Settings → Apps & Notifications → App Permissions → Location → Don't Allow</li>
+                </ul>
+
+                <h3>6.2 Impact of Denying Permission</h3>
+                <ul>
+                    <li>The App cannot collect GPS data and cannot calculate fare automatically</li>
+                    <li>Automatically switches to time-only mode (manual time input required)</li>
+                </ul>
+
+                <h3>6.3 Access and Deletion</h3>
+                <ul>
+                    <li>Real-time collected data can be reviewed in your device settings at any time</li>
+                    <li>All stored data is permanently deleted when the App is uninstalled</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>7. Security</h2>
+                <ul>
+                    <li>All data is processed only on your device, so there is no risk of data leakage during transmission</li>
+                    <li>No encryption or special security technology needed (on-device processing)</li>
+                    <li>Protected by your device's operating system security mechanisms</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>8. Children's Information</h2>
+                <p>This App is intended for users of a certain age and above. Parents/guardians can control location permissions for children through device settings.</p>
+            </section>
+
+            <section>
+                <h2>9. Policy Changes</h2>
+                <p>This Privacy Policy may be updated at any time. Material changes will be notified through App updates or notices on this page. Continued use of the App constitutes acceptance of the updated policy.</p>
+            </section>
+
+            <section class="contact">
+                <h2 style="border: none; padding: 0; margin-bottom: 12px;">📧 Contact & Support</h2>
+                <p><strong>Email:</strong> <a href="mailto:mjesun12345@gmail.com">mjesun12345@gmail.com</a></p>
+                <p>For any questions or requests regarding personal information handling, please contact us at the email address above.</p>
+            </section>
+        </div>
+
+        <footer>
+            <p>© 2026 Taxi Meter. All rights reserved.</p>
+            <p><a href="https://github.com">View on GitHub</a></p>
+        </footer>
+    </div>
+
+    <script>
+        function showKorean() {
+            document.getElementById('korean').classList.remove('hidden');
+            document.getElementById('english').classList.add('hidden');
+            document.querySelectorAll('.lang-toggle button')[0].classList.add('active');
+            document.querySelectorAll('.lang-toggle button')[1].classList.remove('active');
+        }
+
+        function showEnglish() {
+            document.getElementById('korean').classList.add('hidden');
+            document.getElementById('english').classList.remove('hidden');
+            document.querySelectorAll('.lang-toggle button')[0].classList.remove('active');
+            document.querySelectorAll('.lang-toggle button')[1].classList.add('active');
+        }
+    </script>
+</body>
+</html>
