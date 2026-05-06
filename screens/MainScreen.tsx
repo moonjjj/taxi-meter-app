@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, SafeAreaView, View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from 'react-native';
+import {
+  Animated, SafeAreaView, View, Text, StyleSheet, TouchableOpacity,
+  Alert, Linking, Modal, TouchableWithoutFeedback, Dimensions,
+} from 'react-native';
+
+type Rect = { x: number; y: number; w: number; h: number };
 import * as ScreenOrientation from 'expo-screen-orientation';
 import SevenSegmentText from '../components/SevenSegmentText';
 import HorseSprite from '../components/HorseSprite';
@@ -193,6 +198,15 @@ const MainScreen: React.FC = () => {
     animator.reset(BASE_FARE);
   }, [timer, animator]);
 
+  // 온보딩 툴팁: 앱 시작 시마다 표시, 탭하면 닫힘
+  const [showTooltips, setShowTooltips] = useState(true);
+  const dismissTooltips = useCallback(() => setShowTooltips(false), []);
+
+  // 버튼 가시성
+  const showStartBtn = timer.state === 'idle' || timer.state === 'paused';
+  const showPauseBtn = timer.state === 'running';
+  const showResetBtn = timer.state === 'running' || timer.state === 'paused';
+
   const handleToggleOrientation = useCallback(async () => {
     try {
       if (orientation === 'portrait') {
@@ -207,13 +221,11 @@ const MainScreen: React.FC = () => {
     }
   }, [orientation]);
 
-  const isLandscape = orientation === 'landscape';
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, isLandscape && styles.containerLandscape]}>
+      <View style={styles.container}>
         {/* 택시 미터기 본체 */}
-        <View style={[styles.meterFrameOuter, isLandscape && styles.meterFrameOuterLandscape]}>
+        <View style={styles.meterFrameOuter}>
           <View style={styles.meterFrameInner}>
             {/* 상단 브랜드 / 타이틀 */}
             <View style={styles.topRow}>
@@ -232,13 +244,13 @@ const MainScreen: React.FC = () => {
             </View>
 
             {/* 왼쪽: 말(정사각형) / 오른쪽: 요금(안에 Base 포함) */}
-            <View style={[styles.fareRow, isLandscape && styles.fareRowLandscape]}>
-              <View style={[styles.horseColumn, isLandscape && styles.horseColumnLandscape]}>
+            <View style={styles.fareRow}>
+              <View style={styles.horseColumn}>
                 <View style={styles.horseSlot}>
                   <HorseSprite level={horseLevel} />
                 </View>
               </View>
-              <View style={[styles.fareHighlight, isLandscape && styles.fareHighlightLandscape]}>
+              <View style={styles.fareHighlight}>
                 <Text style={styles.fareLabel}>요금</Text>
                 <View style={styles.fareValueRow}>
                   <OdometerNumber
@@ -321,40 +333,79 @@ const MainScreen: React.FC = () => {
             )}
 
             {/* 하단 보조 텍스트 */}
-            {!isLandscape && (
-              <View style={styles.footerRow}>
-                <Text style={styles.footerText}>
-                  RETRO TAXI MADE BY JESEON
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>
+                RETRO TAXI MADE BY JESEON
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 컨트롤 버튼 영역 — iPhone 통화 UI 스타일 */}
+        <View style={styles.controlsWrapper}>
+          <View style={styles.controls}>
+            {showStartBtn && (
+              <View style={styles.callBtnWrap}>
+                <TouchableOpacity
+                  style={[styles.callBtnCircle, styles.callBtnStart]}
+                  onPress={handleStart}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.callBtnIcon}>▶</Text>
+                </TouchableOpacity>
+                <Text style={styles.callBtnLabel}>
+                  {timer.state === 'paused' ? 'RESUME' : 'START'}
                 </Text>
+              </View>
+            )}
+            {showPauseBtn && (
+              <View style={styles.callBtnWrap}>
+                <TouchableOpacity
+                  style={[styles.callBtnCircle, styles.callBtnPause]}
+                  onPress={handlePause}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.callBtnIcon}>⏸</Text>
+                </TouchableOpacity>
+                <Text style={styles.callBtnLabel}>PAUSE</Text>
+              </View>
+            )}
+            {showResetBtn && (
+              <View style={styles.callBtnWrap}>
+                <TouchableOpacity
+                  style={[styles.callBtnCircle, styles.callBtnReset]}
+                  onPress={handleReset}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.callBtnIcon}>↺</Text>
+                </TouchableOpacity>
+                <Text style={styles.callBtnLabel}>RESET</Text>
               </View>
             )}
           </View>
         </View>
-
-        {/* 컨트롤 버튼 영역 */}
-        <View style={[styles.controlsWrapper, isLandscape && styles.controlsWrapperLandscape]}>
-          <View style={[styles.controls, isLandscape && styles.controlsLandscape]}>
-            <TouchableOpacity
-              style={[styles.controlButton, styles.startButton, isLandscape && styles.controlButtonLandscape]}
-              onPress={handleStart}
-            >
-              <Text style={styles.controlButtonText}>START</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.controlButton, styles.pauseButton, isLandscape && styles.controlButtonLandscape]}
-              onPress={handlePause}
-            >
-              <Text style={styles.controlButtonText}>PAUSE</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.controlButton, styles.resetButton, isLandscape && styles.controlButtonLandscape]}
-              onPress={handleReset}
-            >
-              <Text style={styles.controlButtonText}>RESET</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </View>
+
+      {/* 온보딩 툴팁 오버레이 */}
+      <Modal visible={showTooltips} transparent animationType="fade">
+        <TouchableWithoutFeedback onPress={dismissTooltips}>
+          <View style={styles.tooltipOverlay}>
+            {/* 방향 전환 버튼 툴팁 (우상단) */}
+            <View style={[styles.tooltipBubble, { top: 108, right: 12 }]}>
+              <View style={[styles.tooltipCaret, styles.tooltipCaretUp]} />
+              <Text style={styles.tooltipText}>화면을 가로로{'\n'}전환할 수 있어요</Text>
+            </View>
+
+            {/* START 버튼 툴팁 (우하단) */}
+            <View style={[styles.tooltipBubble, { bottom: 148, right: 12 }]}>
+              <Text style={styles.tooltipText}>눌러서 운행을{'\n'}시작하세요 ▶</Text>
+              <View style={[styles.tooltipCaret, styles.tooltipCaretDown, { left: undefined, right: 18 }]} />
+            </View>
+
+            <Text style={styles.tooltipDismiss}>화면을 탭하면 닫혀요</Text>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -533,43 +584,109 @@ const styles = StyleSheet.create({
     fontSize: 8,
   },
   controlsWrapper: {
-    marginTop: 10,
+    marginTop: 14,
     paddingHorizontal: 8,
   },
   controls: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    gap: 20,
   },
-  controlButton: {
-    flex: 1,
-    marginHorizontal: 3,
-    paddingVertical: 6,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: '#6A5B47',
-    backgroundColor: '#1B1814',
+  callBtnWrap: {
+    alignItems: 'center',
+    gap: 5,
+  },
+  callBtnCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
     shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.55,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
   },
-  startButton: {
-    backgroundColor: '#283F2A',
-    borderColor: '#6FBF6A',
+  callBtnStart: {
+    backgroundColor: '#162B18',
+    borderColor: '#4CAF50',
   },
-  pauseButton: {
-    backgroundColor: '#3A3020',
+  callBtnPause: {
+    backgroundColor: '#2D2000',
     borderColor: '#D4A659',
   },
-  resetButton: {
-    backgroundColor: '#262123',
-    borderColor: '#B06E78',
+  callBtnReset: {
+    backgroundColor: '#2D0C0C',
+    borderColor: '#CC3344',
   },
-  controlButtonText: {
+  callBtnIcon: {
+    fontSize: 26,
     color: '#EDE2C4',
-    fontSize: 10,
+    includeFontPadding: false,
+  },
+  callBtnLabel: {
+    color: '#B8A77B',
+    fontSize: 9,
     letterSpacing: 2,
+  },
+  // 툴팁
+  tooltipOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  tooltipBubble: {
+    position: 'absolute',
+    backgroundColor: 'rgba(26, 20, 12, 0.97)',
+    borderRadius: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(210,180,110,0.18)',
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    width: 182,
+    shadowColor: '#000',
+    shadowOpacity: 0.75,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  tooltipText: {
+    color: '#E8D9B8',
+    fontSize: 12.5,
+    lineHeight: 20,
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  tooltipCaret: {
+    position: 'absolute',
+    width: 11,
+    height: 11,
+    backgroundColor: 'rgba(26, 20, 12, 0.97)',
+    transform: [{ rotate: '45deg' }],
+  },
+  tooltipCaretUp: {
+    top: -5.5,
+    right: 18,
+  },
+  tooltipCaretDown: {
+    bottom: -5.5,
+    left: 85,
+  },
+  tooltipDismiss: {
+    position: 'absolute',
+    bottom: 48,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    color: '#C8A96E',
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   brandRightGroup: {
     flexDirection: 'row',
@@ -622,42 +739,6 @@ const styles = StyleSheet.create({
     color: '#FF7070',
     fontSize: 7,
     letterSpacing: 1.2,
-  },
-  // 가로 모드 전용
-  containerLandscape: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'stretch',
-  },
-  meterFrameOuterLandscape: {
-    flex: 1,
-  },
-  fareRowLandscape: {
-    height: 70,
-  },
-  fareHighlightLandscape: {
-    height: 70,
-  },
-  horseColumnLandscape: {
-    width: 70,
-    height: 70,
-  },
-  controlsWrapperLandscape: {
-    marginTop: 0,
-    marginLeft: 10,
-    paddingHorizontal: 0,
-    justifyContent: 'center',
-  },
-  controlsLandscape: {
-    flexDirection: 'column',
-    gap: 6,
-  },
-  controlButtonLandscape: {
-    flex: 0,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginHorizontal: 0,
   },
 });
 
