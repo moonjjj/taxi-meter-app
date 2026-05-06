@@ -207,11 +207,13 @@ const MainScreen: React.FC = () => {
     }
   }, [orientation]);
 
+  const isLandscape = orientation === 'landscape';
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <View style={[styles.container, isLandscape && styles.containerLandscape]}>
         {/* 택시 미터기 본체 */}
-        <View style={styles.meterFrameOuter}>
+        <View style={[styles.meterFrameOuter, isLandscape && styles.meterFrameOuterLandscape]}>
           <View style={styles.meterFrameInner}>
             {/* 상단 브랜드 / 타이틀 */}
             <View style={styles.topRow}>
@@ -230,13 +232,13 @@ const MainScreen: React.FC = () => {
             </View>
 
             {/* 왼쪽: 말(정사각형) / 오른쪽: 요금(안에 Base 포함) */}
-            <View style={styles.fareRow}>
-              <View style={styles.horseColumn}>
+            <View style={[styles.fareRow, isLandscape && styles.fareRowLandscape]}>
+              <View style={[styles.horseColumn, isLandscape && styles.horseColumnLandscape]}>
                 <View style={styles.horseSlot}>
                   <HorseSprite level={horseLevel} />
                 </View>
               </View>
-              <View style={styles.fareHighlight}>
+              <View style={[styles.fareHighlight, isLandscape && styles.fareHighlightLandscape]}>
                 <Text style={styles.fareLabel}>요금</Text>
                 <View style={styles.fareValueRow}>
                   <OdometerNumber
@@ -319,31 +321,33 @@ const MainScreen: React.FC = () => {
             )}
 
             {/* 하단 보조 텍스트 */}
-            <View style={styles.footerRow}>
-              <Text style={styles.footerText}>
-                RETRO TAXI MADE BY JESEON
-              </Text>
-            </View>
+            {!isLandscape && (
+              <View style={styles.footerRow}>
+                <Text style={styles.footerText}>
+                  RETRO TAXI MADE BY JESEON
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
         {/* 컨트롤 버튼 영역 */}
-        <View style={styles.controlsWrapper}>
-          <View style={styles.controls}>
+        <View style={[styles.controlsWrapper, isLandscape && styles.controlsWrapperLandscape]}>
+          <View style={[styles.controls, isLandscape && styles.controlsLandscape]}>
             <TouchableOpacity
-              style={[styles.controlButton, styles.startButton]}
+              style={[styles.controlButton, styles.startButton, isLandscape && styles.controlButtonLandscape]}
               onPress={handleStart}
             >
               <Text style={styles.controlButtonText}>START</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.controlButton, styles.pauseButton]}
+              style={[styles.controlButton, styles.pauseButton, isLandscape && styles.controlButtonLandscape]}
               onPress={handlePause}
             >
               <Text style={styles.controlButtonText}>PAUSE</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.controlButton, styles.resetButton]}
+              style={[styles.controlButton, styles.resetButton, isLandscape && styles.controlButtonLandscape]}
               onPress={handleReset}
             >
               <Text style={styles.controlButtonText}>RESET</Text>
@@ -618,6 +622,42 @@ const styles = StyleSheet.create({
     color: '#FF7070',
     fontSize: 7,
     letterSpacing: 1.2,
+  },
+  // 가로 모드 전용
+  containerLandscape: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'stretch',
+  },
+  meterFrameOuterLandscape: {
+    flex: 1,
+  },
+  fareRowLandscape: {
+    height: 70,
+  },
+  fareHighlightLandscape: {
+    height: 70,
+  },
+  horseColumnLandscape: {
+    width: 70,
+    height: 70,
+  },
+  controlsWrapperLandscape: {
+    marginTop: 0,
+    marginLeft: 10,
+    paddingHorizontal: 0,
+    justifyContent: 'center',
+  },
+  controlsLandscape: {
+    flexDirection: 'column',
+    gap: 6,
+  },
+  controlButtonLandscape: {
+    flex: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginHorizontal: 0,
   },
 });
 

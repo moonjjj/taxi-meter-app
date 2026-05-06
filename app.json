@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "taxi-meter-app",
+    "name": "추억의 택시미터기",
     "slug": "taxi-meter-app",
     "sdkVersion": "55.0.0",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "icon": "./assets/app_icon.png",
     "userInterfaceStyle": "light",
     "splash": {
