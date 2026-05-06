@@ -59,18 +59,22 @@ export function useCountdownBucket(
     }
 
     const dtSec = elapsedSeconds - lastElapsedRef.current;
-    if (dtSec <= 0) {
+    const dDist = Math.max(0, totalDistanceM - lastTotalDistRef.current);
+
+    // [FIX] dDist를 먼저 계산한 뒤 조기 return 여부를 판단한다.
+    // React 렌더링 특성상 elapsedSeconds와 totalDistanceM이 서로 다른 렌더 사이클에
+    // 업데이트될 수 있다. dtSec=0이더라도 dDist>0이면 거리 감소를 처리해야 한다.
+    if (dtSec <= 0 && dDist <= 0) {
       lastElapsedRef.current = elapsedSeconds;
       lastTotalDistRef.current = totalDistanceM;
       return;
     }
 
-    const dDist = Math.max(0, totalDistanceM - lastTotalDistRef.current);
     lastElapsedRef.current = elapsedSeconds;
     lastTotalDistRef.current = totalDistanceM;
 
     // 주행 중이면 이동 거리, 정지/저속이면 경과 시간(초)을 감소량으로 사용
-    const decrement = speedKmh < SPEED_THRESHOLD_KMH ? dtSec : dDist;
+    const decrement = speedKmh < SPEED_THRESHOLD_KMH ? Math.max(0, dtSec) : dDist;
 
     let current = bucketRemainingRef.current - decrement;
     let fareSteps = 0;

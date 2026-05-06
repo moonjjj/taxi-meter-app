@@ -1,90 +1,65 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-## App Purpose & Vision
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-**"Nostalgia for the old taxis"** — This app recreates the iconic experience of riding in classic Korean taxis from the 80s-90s era.
+## 1. Think Before Coding
 
-The inspiration comes from:
-- A galloping horse that runs faster as the taxi speeds up
-- Numbers dropping elegantly, with the fare ticking up by 100 won at a time
-- The distinctive retro UI design of that golden era
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-Through this app, users experience the charm and joy of those times while driving — both in the app and on the road. The goal is to rekindle that nostalgic feeling and make meter-watching fun again.
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-## Commands
+## 2. Simplicity First
 
-```bash
-# Start development server
-npx expo start
+**Minimum code that solves the problem. Nothing speculative.**
 
-# Run on specific platforms
-npx expo start --ios
-npx expo start --android
-npx expo start --web
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
 ```
 
-There are no test commands configured. TypeScript type-checking is the primary code quality tool (`npx tsc --noEmit`).
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-## Architecture
+---
 
-This is a single-screen React Native / Expo app — a retro-styled taxi fare meter. There is no navigation library; the entire app is one screen (`screens/MainScreen.tsx`).
-
-### Data Flow
-
-```
-useTimer (idle → running → paused)
-    ↓
-useGpsSpeed (expo-location, real GPS with smoothing + anomaly detection)
-    ↓
-useAccumulatedDistance (speed × time integration)
-    ↓
-useCountdownBucket (dual-mode fare engine: distance-based ≥4 km/h, time-based <4 km/h)
-    ↓
-useFareDisplayAnimator (queue-based: each +100 KRW step triggers 180ms animation)
-    ↓
-OdometerNumber (mechanical rolling digit animation, 220ms per digit)
-```
-
-`MainScreen.tsx` composes all hooks and passes data down to display components. All state lives in hooks; components are purely presentational.
-
-### Fare Logic
-
-- Base fare: **3,000 KRW**
-- Base phase: first 1,600m accumulated → +100 KRW, then switch to metered mode
-- **Distance mode** (speed ≥ 4 km/h): every 131m = +100 KRW
-- **Time mode** (speed < 4 km/h): every 30 sec = +100 KRW
-- Fare increments are queued in `useFareDisplayAnimator` so the odometer animates each +100 KRW step sequentially even if multiple steps arrive at once
-
-### Key Components
-
-- **SevenSegmentText** — renders retro LED 7-segment digits with glow effects; supports sizes `sm/md/lg/xl` and variants `primary` (cyan), `secondary` (teal), `fare` (red)
-- **OdometerNumber** — mechanical rolling digit transitions with staggered timing
-- **CountdownRollingDisplay** — wraps OdometerNumber to show distance/time remaining until next fare increment
-- **HorseSprite** — Lottie animation with 4 speed levels (idle, low, mid, high)
-
-### Unused / Legacy Files
-
-These hooks exist but are not wired into `MainScreen`:
-- `useSpeedMetrics.ts` — synthetic sinusoidal speed for testing
-- `useTaxiMeterCalculator.ts` — earlier time-only fare model
-- `useMeterCountdown.ts` — duplicates `useCountdownBucket` logic
-- `LedHorseIcon.tsx` — static geometric horse icon (kept for reference)
-
-### UI / Visual Design Rules
-
-- All status/alert UI must match the retro instrument-panel aesthetic — no modern rounded cards or soft shadows.
-- **Status banners** (GPS lost, permission errors, etc.) use `statusPanel` style: dark background `#030711`, 1px border, borderRadius 2, a thick left accent border (3px), and an inline `BlinkingLed` dot (Animated.View pulsing 0→1 opacity).
-  - GPS signal lost: amber accent `#D4A84B`, ALL-CAPS text with `letterSpacing: 1.2`
-  - Permission/error: red accent `#FF5050`, same text style
-- Text in status banners is ALL CAPS, `fontSize: 8`, `letterSpacing: 1.2` — no sentence-case or modern typography.
-- Avoid `rgba()` backgrounds with large radius in the meter frame area; prefer opaque dark backgrounds (`#030711`, `#02040A`) with explicit border colors.
-
-### Platform & Build
-
-- Expo SDK 54, React Native 0.81, React 19, TypeScript strict mode
-- Bundle ID: `com.jeseon.taximeter`
-- Location permissions are declared in `app.json`; the Korean-language permission message is set via the `expo-location` plugin
-- EAS build profiles: `development` (internal distribution), `preview`, `production` (auto-increment version)
-- Web support via `react-native-web`
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

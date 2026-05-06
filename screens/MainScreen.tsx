@@ -14,6 +14,10 @@ import { useFareDisplayAnimator } from '../hooks/useFareDisplayAnimator';
 const BASE_FARE = 3000;
 const FARE_STEP_MS = 180;
 
+// 합성 속도 테스트 모드: null = 실제 GPS 사용, 숫자 = 고정 속도(km/h)
+// 예) 6으로 설정하면 GPS 없이 6 km/h 고정으로 동작 확인 가능
+const DEBUG_FIXED_SPEED_KMH: number | null = null;
+
 /** 타이머 경과 기반 모의 속도(km/h). 5~70 구간 선회 */
 function mockSpeedKmh(elapsedSeconds: number): number {
   const t = elapsedSeconds / 10;
@@ -99,10 +103,10 @@ const MainScreen: React.FC = () => {
 
   // START 전에는 속도 0 고정, 동작 중에는 GPS 값만 사용.
   // GPS 신호 손실(gpsLost) 시에도 0으로 고정 → useCountdownBucket이 시간 기반 모드로 전환.
+  // DEBUG_FIXED_SPEED_KMH가 설정된 경우 GPS 대신 고정 속도 사용 (테스트 전용)
   const speedKmh = useMemo(() => {
-    if (!isRunning) {
-      return 0;
-    }
+    if (!isRunning) return 0;
+    if (DEBUG_FIXED_SPEED_KMH !== null) return DEBUG_FIXED_SPEED_KMH;
     if (gps.permissionStatus !== 'granted' || gps.error != null || gps.gpsLost) {
       return 0;
     }
