@@ -112,11 +112,11 @@ const MainScreen: React.FC = () => {
   const speedKmh = useMemo(() => {
     if (!isRunning) return 0;
     if (DEBUG_FIXED_SPEED_KMH !== null) return DEBUG_FIXED_SPEED_KMH;
-    if (gps.permissionStatus !== 'granted' || gps.error != null || gps.gpsLost) {
+    if (gps.permissionStatus !== 'granted' || gps.gpsLost) {
       return 0;
     }
     return gps.speedKmh;
-  }, [isRunning, gps.permissionStatus, gps.speedKmh, gps.error, gps.gpsLost]);
+  }, [isRunning, gps.permissionStatus, gps.speedKmh, gps.gpsLost]);
 
   const horseLevel = useMemo(() => {
     // 아직 한 번도 START 하지 않은 완전 대기 상태에서만 말 정지
@@ -465,11 +465,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     flexDirection: 'row',
     alignItems: 'stretch',
-    height: 100,
   },
   fareHighlight: {
     flex: 1,
-    height: 100,
     paddingVertical: 8,
     paddingHorizontal: 8,
     borderRadius: 6,

@@ -43,14 +43,13 @@ export type GpsSpeedResult = {
 const LOCATION_WATCH_OPTIONS: Location.LocationOptions = {
   accuracy: Location.Accuracy.BestForNavigation,
   timeInterval: 1000,
-  distanceInterval: 0,
+  distanceInterval: 1,
 };
 
 const MAX_SPEED_KMH = 120;
 const MIN_DT_MS = 200;
 const MAX_ACCEPTABLE_ACCURACY_M = 100;
-const SMOOTHING_ALPHA = 0.3;
-const MAX_JUMP_PER_UPDATE_KMH = 12;
+const SMOOTHING_ALPHA = 0.6;
 /** 이 시간(ms) 동안 GPS 업데이트가 없으면 신호 손실로 판단 */
 const GPS_SIGNAL_TIMEOUT_MS = 12000;
 
@@ -180,15 +179,18 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
               typeof coords.accuracy === 'number' &&
               coords.accuracy > MAX_ACCEPTABLE_ACCURACY_M
             ) {
-              // 정확도 미달이어도 위치 참조는 갱신해 다음 업데이트의 dt 계산 오류 방지
-              lastLocationRef.current = location;
+              // 정확도 미달 시 위치 참조를 갱신하지 않는다.
+              // 다음 정상 업데이트가 마지막 정상 위치 기준으로 거리를 계산해
+              // dt가 길어져도 평균 속도는 정확하다.
               return;
             }
 
+            // GPS 칩이 저속에서 speed=0을 보고하는 경우가 흔하다.
+            // 0은 "측정 불가"로 간주하고 Haversine 계산 속도를 사용한다.
             const nativeSpeedMs =
               coords.speed != null &&
               typeof coords.speed === 'number' &&
-              coords.speed >= 0
+              coords.speed > 0
                 ? coords.speed
                 : null;
 
@@ -221,17 +223,6 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
             const kmhRaw = (speedMs * 3600) / 1000;
             const cappedRaw = Math.max(0, Math.min(MAX_SPEED_KMH, kmhRaw));
             const prevSmoothed = lastSmoothedSpeedRef.current;
-
-            if (
-              prevSmoothed != null &&
-              dtSec != null &&
-              dtSec > 0 &&
-              cappedRaw - prevSmoothed > MAX_JUMP_PER_UPDATE_KMH
-            ) {
-              // 이상값: delta는 null로 두고 gpsUpdateId는 갱신하지 않는다
-              setDeltaDistanceMFromGps(null);
-              return;
-            }
 
             const smoothed =
               prevSmoothed != null
