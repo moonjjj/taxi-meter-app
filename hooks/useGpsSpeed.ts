@@ -30,6 +30,8 @@ export type GpsSpeedResult = {
   gpsUpdateId: number;
   /** 주행 중 GPS 신호가 끊긴 상태 (5초 이상 업데이트 없음) */
   gpsLost: boolean;
+  /** GPS 상태: 'ok'=정상, 'reckoning'=추측항법(마지막 속도 유지 중), 'lost'=신호 없음 */
+  gpsStatus: 'ok' | 'reckoning' | 'lost';
   /** 권한 상태 */
   permissionStatus: 'undetermined' | 'granted' | 'denied';
   /** 권한 요청 중 */
@@ -52,6 +54,10 @@ const MAX_ACCEPTABLE_ACCURACY_M = 100;
 const SMOOTHING_ALPHA = 0.6;
 /** 이 시간(ms) 동안 GPS 업데이트가 없으면 신호 손실로 판단 */
 const GPS_SIGNAL_TIMEOUT_MS = 12000;
+/** GPS 손실 후 마지막 속도를 유지하는 dead reckoning 최대 시간(ms) */
+const DEAD_RECKONING_WINDOW_MS = 15000;
+/** dead reckoning 진입 최소 속도(km/h). 이 미만이면 정지 상태로 간주해 DR 스킵 */
+const DEAD_RECKONING_MIN_SPEED_KMH = 5;
 
 export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
   const [speedKmh, setSpeedKmh] = useState(0);
@@ -60,6 +66,7 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
   >(undefined);
   const [gpsUpdateId, setGpsUpdateId] = useState(0);
   const [gpsLost, setGpsLost] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<'ok' | 'reckoning' | 'lost'>('ok');
   const [permissionStatus, setPermissionStatus] = useState<
     'undetermined' | 'granted' | 'denied'
   >('undetermined');
@@ -70,6 +77,7 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
   const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const lastSmoothedSpeedRef = useRef<number | null>(null);
   const gpsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deadReckoningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     setIsRequestingPermission(true);
@@ -115,11 +123,16 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
         clearTimeout(gpsTimeoutRef.current);
         gpsTimeoutRef.current = null;
       }
+      if (deadReckoningTimerRef.current) {
+        clearTimeout(deadReckoningTimerRef.current);
+        deadReckoningTimerRef.current = null;
+      }
       lastLocationRef.current = null;
       lastSmoothedSpeedRef.current = null; // [FIX] 재시작 시 이전 스무딩 값 초기화
       setSpeedKmh(0);
       setDeltaDistanceMFromGps(undefined);
       setGpsLost(false);
+      setGpsStatus('ok');
       return;
     }
 
@@ -133,20 +146,47 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
     setGpsLost(false);
 
     /**
-     * GPS 신호 타임아웃 시작.
-     * GPS_SIGNAL_TIMEOUT_MS 동안 업데이트가 없으면 신호 손실 처리.
+     * GPS 신호 타임아웃 시작 (2단계).
+     * Phase 1 (GPS_SIGNAL_TIMEOUT_MS): GPS 손실 감지 → dead reckoning 진입 또는 즉시 lost
+     * Phase 2 (DEAD_RECKONING_WINDOW_MS): DR 윈도우 만료 → lost 상태로 전환
      * 매 GPS 업데이트마다 호출해 타이머를 리셋한다.
      */
     const startGpsTimeout = () => {
       if (gpsTimeoutRef.current) clearTimeout(gpsTimeoutRef.current);
+      if (deadReckoningTimerRef.current) {
+        clearTimeout(deadReckoningTimerRef.current);
+        deadReckoningTimerRef.current = null;
+      }
       gpsTimeoutRef.current = setTimeout(() => {
-        setGpsLost(true);
-        setSpeedKmh(0);
-        setDeltaDistanceMFromGps(null);
-        setError('GPS 신호가 끊겼습니다. 시간 기반으로 요금을 계산합니다.');
         // 손실 시점의 위치 참조를 제거해 복구 후 첫 업데이트가 오래된 좌표로 잘못된 거리를 계산하지 않도록 한다.
         lastLocationRef.current = null;
-        lastSmoothedSpeedRef.current = null;
+
+        const frozenSpeed = lastSmoothedSpeedRef.current ?? 0;
+
+        if (frozenSpeed >= DEAD_RECKONING_MIN_SPEED_KMH) {
+          // 속도가 충분하면 dead reckoning 진입: 마지막 속도 유지, 거리 기반 계산 지속
+          setGpsStatus('reckoning');
+          setGpsLost(false);
+          setSpeedKmh(frozenSpeed);
+          setDeltaDistanceMFromGps(null); // 실제 GPS delta 없음 → useAccumulatedDistance가 speed*dt 사용
+
+          // Phase 2: DR 윈도우 만료 후 lost로 전환
+          deadReckoningTimerRef.current = setTimeout(() => {
+            setGpsStatus('lost');
+            setGpsLost(true);
+            setSpeedKmh(0);
+            setError('GPS 신호가 끊겼습니다. 시간 기반으로 요금을 계산합니다.');
+            lastSmoothedSpeedRef.current = null;
+          }, DEAD_RECKONING_WINDOW_MS);
+        } else {
+          // 저속/정지 상태 → DR 없이 즉시 lost
+          setGpsStatus('lost');
+          setGpsLost(true);
+          setSpeedKmh(0);
+          setDeltaDistanceMFromGps(null);
+          setError('GPS 신호가 끊겼습니다. 시간 기반으로 요금을 계산합니다.');
+          lastSmoothedSpeedRef.current = null;
+        }
       }, GPS_SIGNAL_TIMEOUT_MS);
     };
 
@@ -166,8 +206,13 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
             if (cancelled) return;
 
             // GPS 업데이트 수신 → 신호 복구 처리 및 타임아웃 리셋
+            setGpsStatus('ok');
             setGpsLost(false);
             setError(null);
+            if (deadReckoningTimerRef.current) {
+              clearTimeout(deadReckoningTimerRef.current);
+              deadReckoningTimerRef.current = null;
+            }
             startGpsTimeout();
 
             const prev = lastLocationRef.current;
@@ -264,6 +309,10 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
         clearTimeout(gpsTimeoutRef.current);
         gpsTimeoutRef.current = null;
       }
+      if (deadReckoningTimerRef.current) {
+        clearTimeout(deadReckoningTimerRef.current);
+        deadReckoningTimerRef.current = null;
+      }
       lastLocationRef.current = null;
       lastSmoothedSpeedRef.current = null;
     };
@@ -274,6 +323,7 @@ export function useGpsSpeed(isRunning: boolean): GpsSpeedResult {
     deltaDistanceMFromGps,
     gpsUpdateId,
     gpsLost,
+    gpsStatus,
     permissionStatus,
     isRequestingPermission,
     error,

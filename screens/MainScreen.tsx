@@ -91,15 +91,15 @@ const MainScreen: React.FC = () => {
 
   const gps = useGpsSpeed(isRunning);
 
-  // gpsLost 3초 debounce: 짧은 신호 끊김엔 배너 표시 안 함
+  // gpsStatus 'lost' 3초 debounce: 짧은 신호 끊김엔 배너 표시 안 함
   useEffect(() => {
-    if (!gps.gpsLost) {
+    if (gps.gpsStatus !== 'lost') {
       setShowGpsLostBanner(false);
       return;
     }
     const t = setTimeout(() => setShowGpsLostBanner(true), 3000);
     return () => clearTimeout(t);
-  }, [gps.gpsLost]);
+  }, [gps.gpsStatus]);
 
   const onFareIncrement = useCallback(
     (deltaSteps: number) => animator.enqueueFareIncrement(deltaSteps),
@@ -107,16 +107,17 @@ const MainScreen: React.FC = () => {
   );
 
   // START 전에는 속도 0 고정, 동작 중에는 GPS 값만 사용.
-  // GPS 신호 손실(gpsLost) 시에도 0으로 고정 → useCountdownBucket이 시간 기반 모드로 전환.
+  // GPS 신호 완전 손실(gpsStatus='lost') 시에만 0으로 고정 → 시간 기반 모드로 전환.
+  // dead reckoning('reckoning') 중에는 훅이 반환하는 frozenSpeed를 그대로 사용 → 거리 기반 유지.
   // DEBUG_FIXED_SPEED_KMH가 설정된 경우 GPS 대신 고정 속도 사용 (테스트 전용)
   const speedKmh = useMemo(() => {
     if (!isRunning) return 0;
     if (DEBUG_FIXED_SPEED_KMH !== null) return DEBUG_FIXED_SPEED_KMH;
-    if (gps.permissionStatus !== 'granted' || gps.gpsLost) {
+    if (gps.permissionStatus !== 'granted' || gps.gpsStatus === 'lost') {
       return 0;
     }
     return gps.speedKmh;
-  }, [isRunning, gps.permissionStatus, gps.speedKmh, gps.gpsLost]);
+  }, [isRunning, gps.permissionStatus, gps.speedKmh, gps.gpsStatus]);
 
   const horseLevel = useMemo(() => {
     // 아직 한 번도 START 하지 않은 완전 대기 상태에서만 말 정지
@@ -296,8 +297,18 @@ const MainScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* GPS 신호 손실 배너 (주행 중 신호 끊김, 3초 debounce) */}
-            {showGpsLostBanner && isRunning && (
+            {/* GPS dead reckoning 배너 (마지막 속도로 추정 중) */}
+            {isRunning && gps.gpsStatus === 'reckoning' && (
+              <View style={[styles.statusPanel, styles.statusPanelAmber]}>
+                <BlinkingLed color="#E89A30" />
+                <Text style={styles.statusPanelTextAmber} numberOfLines={1}>
+                  GPS 추정 중 — DEAD RECKONING ACTIVE
+                </Text>
+              </View>
+            )}
+
+            {/* GPS 신호 완전 손실 배너 (3초 debounce) */}
+            {showGpsLostBanner && isRunning && gps.gpsStatus === 'lost' && (
               <View style={[styles.statusPanel, styles.statusPanelAmber]}>
                 <BlinkingLed color="#D4A84B" />
                 <Text style={styles.statusPanelTextAmber} numberOfLines={1}>
