@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated, SafeAreaView, View, Text, StyleSheet, TouchableOpacity,
-  Alert, Linking, Modal, TouchableWithoutFeedback, Dimensions,
+  Alert, Linking, Modal, TouchableWithoutFeedback, Pressable, Dimensions, useWindowDimensions,
 } from 'react-native';
 
 type Rect = { x: number; y: number; w: number; h: number };
@@ -86,6 +86,10 @@ const MainScreen: React.FC = () => {
   const isRunning = timer.state === 'running';
 
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const { width: winW, height: winH } = useWindowDimensions();
+  const isPortrait = winH > winW;
+  // 세로모드 말 크기: 화면 높이의 30% vs 전체 너비 중 작은 값 → 작은 기기에서 자동 축소
+  const horsePortraitSize = isPortrait ? Math.min(winW - 28, winH * 0.30) : 150;
   // gpsLost가 일시적으로 true가 돼도 배너가 깜빡이지 않도록 3초 debounce
   const [showGpsLostBanner, setShowGpsLostBanner] = useState(false);
 
@@ -166,10 +170,6 @@ const MainScreen: React.FC = () => {
   }, [animator.isFareAnimating, animator.onAnimationComplete]);
 
   const handleStart = useCallback(() => {
-    if (timer.state === 'paused') {
-      timer.resume();
-      return;
-    }
     if (timer.state === 'idle') {
       if (gps.permissionStatus !== 'granted') {
         Alert.alert(
@@ -180,9 +180,7 @@ const MainScreen: React.FC = () => {
             {
               text: '허용',
               onPress: () => {
-                gps.requestPermission().then((granted) => {
-                  // 권한이 허용되면 이후부터는 실제 GPS 속도로 계산
-                });
+                gps.requestPermission().then(() => {});
               },
             },
           ]
@@ -190,23 +188,65 @@ const MainScreen: React.FC = () => {
       }
       timer.start();
     }
-  }, [timer.state, timer.start, timer.resume, gps.permissionStatus, gps.requestPermission]);
-
-  const handlePause = useCallback(() => timer.pause(), [timer.pause]);
+  }, [timer.state, timer.start, gps.permissionStatus, gps.requestPermission]);
 
   const handleReset = useCallback(() => {
     timer.reset();
     animator.reset(BASE_FARE);
   }, [timer, animator]);
 
+  // 운행 중 화면 터치 시 띄우는 액션 모달
+  const [actionModalVisible, setActionModalVisible] = useState(false);
+
+  // 종료 버튼 길게 누르기 애니메이션
+  const holdProgress = useRef(new Animated.Value(0)).current;
+  const holdAnim = useRef<Animated.CompositeAnimation | null>(null);
+
+  const onEndHoldIn = useCallback(() => {
+    holdProgress.setValue(0);
+    holdAnim.current = Animated.timing(holdProgress, {
+      toValue: 1,
+      duration: 1500,
+      useNativeDriver: false,
+    });
+    holdAnim.current.start(({ finished }) => {
+      if (finished) {
+        setActionModalVisible(false);
+        handleReset();
+      }
+    });
+  }, [holdProgress, handleReset]);
+
+  const onEndHoldOut = useCallback(() => {
+    holdAnim.current?.stop();
+    Animated.timing(holdProgress, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [holdProgress]);
+
+  const handleScreenTouch = useCallback(() => {
+    if (timer.state === 'idle') {
+      handleStart();
+    } else {
+      setActionModalVisible(true);
+    }
+  }, [timer.state, handleStart]);
+
+  const handleModalPause = useCallback(() => {
+    setActionModalVisible(false);
+    if (timer.state === 'running') timer.pause();
+  }, [timer]);
+
+  const handleModalContinue = useCallback(() => {
+    setActionModalVisible(false);
+    if (timer.state === 'paused') timer.resume();
+  }, [timer]);
+
   // 온보딩 툴팁: 앱 시작 시마다 표시, 탭하면 닫힘
   const [showTooltips, setShowTooltips] = useState(true);
   const dismissTooltips = useCallback(() => setShowTooltips(false), []);
-
-  // 버튼 가시성
-  const showStartBtn = timer.state === 'idle' || timer.state === 'paused';
-  const showPauseBtn = timer.state === 'running';
-  const showResetBtn = timer.state === 'running' || timer.state === 'paused';
 
   const handleToggleOrientation = useCallback(async () => {
     try {
@@ -224,10 +264,11 @@ const MainScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <TouchableWithoutFeedback onPress={handleScreenTouch}>
       <View style={styles.container}>
-        {/* 택시 미터기 본체 */}
+        {/* 택시 미터기 본체 — flex:1로 전체 채움 */}
         <View style={styles.meterFrameOuter}>
-          <View style={styles.meterFrameInner}>
+          <View style={[styles.meterFrameInner, isPortrait && styles.meterFrameInnerPortrait]}>
             {/* 상단 브랜드 / 타이틀 */}
             <View style={styles.topRow}>
               <Text style={styles.brandLeft}>TAXI</Text>
@@ -244,14 +285,19 @@ const MainScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* 왼쪽: 말(정사각형) / 오른쪽: 요금(안에 Base 포함) */}
-            <View style={styles.fareRow}>
-              <View style={styles.horseColumn}>
+            {/* 말 + 요금: 세로모드 column, 가로모드 row */}
+            <View style={[styles.fareRow, isPortrait && styles.fareRowPortrait]}>
+              <View style={[
+                styles.horseColumn,
+                isPortrait
+                  ? [styles.horseColumnPortrait, { width: horsePortraitSize, height: horsePortraitSize }]
+                  : styles.horseColumnLandscape,
+              ]}>
                 <View style={styles.horseSlot}>
                   <HorseSprite level={horseLevel} />
                 </View>
               </View>
-              <View style={styles.fareHighlight}>
+              <View style={[styles.fareHighlight, isPortrait && styles.fareHighlightPortrait]}>
                 <Text style={styles.fareLabel}>요금</Text>
                 <View style={styles.fareValueRow}>
                   <OdometerNumber
@@ -273,27 +319,33 @@ const MainScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* 보조: SPEED / DIST / TIME (작게) */}
-            <View style={styles.digitsPanel}>
-              <View style={styles.digitBlock}>
+            {/* 보조: SPEED / DIST / TIME — 세로모드 column, 가로모드 row */}
+            <View style={[styles.digitsPanel, isPortrait && styles.digitsPanelPortrait]}>
+              <View style={[styles.digitBlock, isPortrait && styles.digitBlockPortrait]}>
                 <Text style={styles.digitLabel}>SPEED</Text>
-                <SevenSegmentText size="sm">
-                  {speedKmh.toFixed(1).padStart(5, '0')}
-                </SevenSegmentText>
-                <Text style={styles.digitUnit}>km/h</Text>
+                <View style={isPortrait ? styles.digitValueGroup : undefined}>
+                  <SevenSegmentText size="sm">
+                    {speedKmh.toFixed(1).padStart(5, '0')}
+                  </SevenSegmentText>
+                  <Text style={styles.digitUnit}>km/h</Text>
+                </View>
               </View>
-              <View style={styles.digitBlock}>
+              <View style={[styles.digitBlock, isPortrait && styles.digitBlockPortrait]}>
                 <Text style={styles.digitLabel}>DIST</Text>
-                <SevenSegmentText size="sm">
-                  {distanceKm.toFixed(2).padStart(5, '0')}
-                </SevenSegmentText>
-                <Text style={styles.digitUnit}>km</Text>
+                <View style={isPortrait ? styles.digitValueGroup : undefined}>
+                  <SevenSegmentText size="sm">
+                    {distanceKm.toFixed(2).padStart(5, '0')}
+                  </SevenSegmentText>
+                  <Text style={styles.digitUnit}>km</Text>
+                </View>
               </View>
-              <View style={styles.digitBlock}>
+              <View style={[styles.digitBlock, isPortrait && styles.digitBlockPortrait]}>
                 <Text style={styles.digitLabel}>TIME</Text>
-                <SevenSegmentText size="sm">
-                  {padTime(timer.elapsedSeconds)}
-                </SevenSegmentText>
+                <View style={isPortrait ? styles.digitValueGroup : undefined}>
+                  <SevenSegmentText size="sm">
+                    {padTime(timer.elapsedSeconds)}
+                  </SevenSegmentText>
+                </View>
               </View>
             </View>
 
@@ -352,50 +404,73 @@ const MainScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* 컨트롤 버튼 영역 — iPhone 통화 UI 스타일 */}
-        <View style={styles.controlsWrapper}>
-          <View style={styles.controls}>
-            {showStartBtn && (
-              <View style={styles.callBtnWrap}>
-                <TouchableOpacity
-                  style={[styles.callBtnCircle, styles.callBtnStart]}
-                  onPress={handleStart}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.callBtnIcon}>▶</Text>
-                </TouchableOpacity>
-                <Text style={styles.callBtnLabel}>
-                  {timer.state === 'paused' ? 'RESUME' : 'START'}
-                </Text>
-              </View>
-            )}
-            {showPauseBtn && (
-              <View style={styles.callBtnWrap}>
-                <TouchableOpacity
-                  style={[styles.callBtnCircle, styles.callBtnPause]}
-                  onPress={handlePause}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.callBtnIcon}>⏸</Text>
-                </TouchableOpacity>
-                <Text style={styles.callBtnLabel}>PAUSE</Text>
-              </View>
-            )}
-            {showResetBtn && (
-              <View style={styles.callBtnWrap}>
-                <TouchableOpacity
-                  style={[styles.callBtnCircle, styles.callBtnReset]}
-                  onPress={handleReset}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.callBtnIcon}>↺</Text>
-                </TouchableOpacity>
-                <Text style={styles.callBtnLabel}>RESET</Text>
-              </View>
-            )}
-          </View>
-        </View>
       </View>
+      </TouchableWithoutFeedback>
+
+      {/* 운행 중 터치 시 액션 모달 */}
+      <Modal
+        visible={actionModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActionModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => {
+          onEndHoldOut();
+          setActionModalVisible(false);
+        }}>
+          <View style={styles.actionModalBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={styles.actionModalCard}>
+                <Text style={styles.actionModalTitle}>운행을 마치시겠습니까?</Text>
+
+                {/* 종료 — 길게 눌러야 실행 */}
+                <Pressable
+                  onPressIn={onEndHoldIn}
+                  onPressOut={onEndHoldOut}
+                  style={styles.actionModalBtnEnd}
+                >
+                  <View style={styles.actionModalBtnEndInner}>
+                    <Animated.View
+                      style={[
+                        styles.actionModalBtnEndFill,
+                        { width: holdProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+                      ]}
+                    />
+                    <Text style={styles.actionModalBtnEndText}>종료</Text>
+                    <Text style={styles.actionModalBtnEndHint}>길게 누르세요</Text>
+                  </View>
+                </Pressable>
+
+                {/* 일시정지 */}
+                <TouchableOpacity
+                  style={[
+                    styles.actionModalBtnPause,
+                    timer.state === 'paused' && styles.actionModalBtnDisabled,
+                  ]}
+                  onPress={handleModalPause}
+                  activeOpacity={0.75}
+                  disabled={timer.state === 'paused'}
+                >
+                  <Text style={styles.actionModalBtnPauseText}>
+                    {timer.state === 'paused' ? '일시정지 중' : '일시정지'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* 계속진행 — primary */}
+                <TouchableOpacity
+                  style={styles.actionModalBtnContinue}
+                  onPress={handleModalContinue}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.actionModalBtnContinueText}>
+                    {timer.state === 'paused' ? '운행 재개' : '계속진행'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* 온보딩 툴팁 오버레이 */}
       <Modal visible={showTooltips} transparent animationType="fade">
@@ -407,10 +482,9 @@ const MainScreen: React.FC = () => {
               <Text style={styles.tooltipText}>화면을 가로로{'\n'}전환할 수 있어요</Text>
             </View>
 
-            {/* START 버튼 툴팁 (우하단) */}
-            <View style={[styles.tooltipBubble, { bottom: 148, right: 12 }]}>
-              <Text style={styles.tooltipText}>눌러서 운행을{'\n'}시작하세요 ▶</Text>
-              <View style={[styles.tooltipCaret, styles.tooltipCaretDown, { left: undefined, right: 18 }]} />
+            {/* 화면 터치 안내 (하단 중앙) */}
+            <View style={[styles.tooltipBubble, { bottom: 100, alignSelf: 'center', right: undefined }]}>
+              <Text style={styles.tooltipText}>화면을 터치하면{'\n'}운행이 시작돼요</Text>
             </View>
 
             <Text style={styles.tooltipDismiss}>화면을 탭하면 닫혀요</Text>
@@ -425,15 +499,16 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#050608',
+    position: 'relative',
   },
   container: {
     flex: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 28,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
     backgroundColor: '#050608',
-    justifyContent: 'space-between',
   },
   meterFrameOuter: {
+    flex: 1,
     borderRadius: 10,
     padding: 6,
     backgroundColor: '#D1C39A',
@@ -443,13 +518,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   meterFrameInner: {
+    flex: 1,
     width: '100%',
     borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     backgroundColor: '#02040A',
     borderWidth: 1,
     borderColor: '#4B4844',
+    justifyContent: 'space-between',
+  },
+  meterFrameInnerPortrait: {
+    justifyContent: 'flex-start',
   },
   topRow: {
     flexDirection: 'row',
@@ -459,22 +539,26 @@ const styles = StyleSheet.create({
   },
   brandLeft: {
     color: '#EEDCB0',
-    fontSize: 10,
+    fontSize: 15,
     letterSpacing: 1.5,
   },
   brandCenterTitle: {
     color: '#EEDCB0',
-    fontSize: 11,
+    fontSize: 17,
     letterSpacing: 2,
   },
   brandRight: {
     color: '#EEDCB0',
-    fontSize: 11,
+    fontSize: 17,
     letterSpacing: 2,
   },
   fareRow: {
     marginTop: 8,
     flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  fareRowPortrait: {
+    flexDirection: 'column',
     alignItems: 'stretch',
   },
   fareHighlight: {
@@ -488,9 +572,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
   },
+  fareHighlightPortrait: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
   fareLabel: {
     color: '#B8A77B',
-    fontSize: 10,
+    fontSize: 15,
     letterSpacing: 1.5,
     marginBottom: 4,
   },
@@ -500,15 +589,21 @@ const styles = StyleSheet.create({
   },
   fareUnit: {
     color: '#EEDCB0',
-    fontSize: 14,
+    fontSize: 21,
     marginLeft: 2,
   },
   horseColumn: {
-    width: 100,
-    height: 100,
-    marginRight: 6,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  horseColumnLandscape: {
+    width: 150,
+    height: 150,
+    marginRight: 6,
+  },
+  horseColumnPortrait: {
+    marginBottom: 10,
+    alignSelf: 'center',
   },
   horseSlot: {
     width: '100%',
@@ -535,6 +630,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  digitsPanelPortrait: {
+    flexDirection: 'column',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 6,
+  },
+  digitBlockPortrait: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 0,
+    marginHorizontal: 0,
+    paddingVertical: 6,
+  },
+  digitValueGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   digitBlock: {
     flex: 1,
     marginHorizontal: 2,
@@ -542,14 +656,14 @@ const styles = StyleSheet.create({
   },
   digitLabel: {
     color: '#B8A77B',
-    fontSize: 7,
+    fontSize: 11,
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   digitUnit: {
     marginTop: 0,
     color: '#B8A77B',
-    fontSize: 6,
+    fontSize: 9,
   },
   statusPanel: {
     marginTop: 6,
@@ -573,14 +687,14 @@ const styles = StyleSheet.create({
   },
   statusPanelTextAmber: {
     color: '#D4A84B',
-    fontSize: 8,
+    fontSize: 12,
     letterSpacing: 1.2,
     fontVariant: ['tabular-nums'],
     flexShrink: 1,
   },
   statusPanelTextRed: {
     color: '#FF7070',
-    fontSize: 8,
+    fontSize: 12,
     letterSpacing: 1.2,
     fontVariant: ['tabular-nums'],
     flexShrink: 1,
@@ -590,32 +704,33 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#C9BA86',
-    fontSize: 8,
+    fontSize: 12,
   },
   controlsWrapper: {
-    marginTop: 14,
-    paddingHorizontal: 8,
+    position: 'absolute',
+    bottom: 36,
+    right: 20,
   },
   controls: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'flex-start',
-    gap: 20,
+    gap: 14,
   },
   callBtnWrap: {
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
   },
   callBtnCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     shadowColor: '#000',
-    shadowOpacity: 0.55,
-    shadowRadius: 6,
+    shadowOpacity: 0.7,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
   },
   callBtnStart: {
@@ -631,14 +746,14 @@ const styles = StyleSheet.create({
     borderColor: '#CC3344',
   },
   callBtnIcon: {
-    fontSize: 26,
+    fontSize: 30,
     color: '#EDE2C4',
     includeFontPadding: false,
   },
   callBtnLabel: {
     color: '#B8A77B',
-    fontSize: 9,
-    letterSpacing: 2,
+    fontSize: 12,
+    letterSpacing: 1.5,
   },
   // 툴팁
   tooltipOverlay: {
@@ -664,8 +779,8 @@ const styles = StyleSheet.create({
   },
   tooltipText: {
     color: '#E8D9B8',
-    fontSize: 12.5,
-    lineHeight: 20,
+    fontSize: 19,
+    lineHeight: 28,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
@@ -691,7 +806,7 @@ const styles = StyleSheet.create({
     right: 0,
     textAlign: 'center',
     color: '#C8A96E',
-    fontSize: 12,
+    fontSize: 18,
     letterSpacing: 0.5,
     textShadowColor: 'rgba(0,0,0,0.9)',
     textShadowOffset: { width: 0, height: 1 },
@@ -713,7 +828,7 @@ const styles = StyleSheet.create({
   },
   orientationTinyButtonText: {
     color: '#EDE2C4',
-    fontSize: 8,
+    fontSize: 12,
     letterSpacing: 1,
   },
   orientationRow: {
@@ -731,8 +846,108 @@ const styles = StyleSheet.create({
   },
   orientationButtonText: {
     color: '#EDE2C4',
-    fontSize: 9,
+    fontSize: 14,
     letterSpacing: 1,
+  },
+  // 액션 모달
+  actionModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionModalCard: {
+    width: 300,
+    backgroundColor: '#0D1018',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#2E2A22',
+    paddingTop: 28,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.85,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    gap: 10,
+  },
+  actionModalTitle: {
+    color: '#EEDCB0',
+    fontSize: 17,
+    letterSpacing: 0.4,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  // 종료 버튼 (홀드)
+  actionModalBtnEnd: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#7A2030',
+    backgroundColor: '#1A080C',
+    overflow: 'hidden',
+  },
+  actionModalBtnEndInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  actionModalBtnEndFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#5A1020',
+  },
+  actionModalBtnEndText: {
+    color: '#CC4455',
+    fontSize: 14,
+    letterSpacing: 0.5,
+    zIndex: 1,
+  },
+  actionModalBtnEndHint: {
+    color: '#6B3040',
+    fontSize: 11,
+    letterSpacing: 0.3,
+    zIndex: 1,
+  },
+  // 일시정지 버튼
+  actionModalBtnPause: {
+    paddingVertical: 13,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#6B5020',
+    backgroundColor: '#1A1200',
+    alignItems: 'center',
+  },
+  actionModalBtnPauseText: {
+    color: '#C49A40',
+    fontSize: 14,
+    letterSpacing: 0.5,
+  },
+  // 계속진행 버튼 (primary)
+  actionModalBtnContinue: {
+    paddingVertical: 18,
+    borderRadius: 10,
+    backgroundColor: '#162B18',
+    borderWidth: 1.5,
+    borderColor: '#4CAF50',
+    alignItems: 'center',
+    marginTop: 4,
+    shadowColor: '#4CAF50',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  actionModalBtnContinueText: {
+    color: '#7FD982',
+    fontSize: 17,
+    letterSpacing: 1,
+  },
+  actionModalBtnDisabled: {
+    opacity: 0.35,
   },
   gpsPermissionButton: {
     marginLeft: 8,
@@ -746,7 +961,7 @@ const styles = StyleSheet.create({
   },
   gpsPermissionButtonText: {
     color: '#FF7070',
-    fontSize: 7,
+    fontSize: 11,
     letterSpacing: 1.2,
   },
 });
